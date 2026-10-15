@@ -1,0 +1,1 @@
+export default function Dashboard() { return <section className="panel"><h3>Dashboard</h3><p>Live summary is shown in the operations console.</p></section> }

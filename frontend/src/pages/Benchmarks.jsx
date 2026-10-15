@@ -1,0 +1,1 @@
+export default function Benchmarks() { return <section className="panel"><h3>Benchmarks</h3><p>Use the quick benchmark in the operations console.</p></section> }

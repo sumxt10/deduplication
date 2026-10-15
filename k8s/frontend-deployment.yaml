@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ps15-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: ps15-frontend }
+  template:
+    metadata: { labels: { app: ps15-frontend } }
+    spec:
+      containers:
+        - name: frontend
+          image: ps15-frontend:latest
+          ports: [{ containerPort: 80 }]
+          readinessProbe: { httpGet: { path: /, port: 80 }, initialDelaySeconds: 5 }
+          livenessProbe: { httpGet: { path: /, port: 80 }, initialDelaySeconds: 10 }

@@ -1,0 +1,1 @@
+export default function Transactions() { return <section className="panel"><h3>Transactions</h3><p>Processed events are persisted by the backend.</p></section> }

@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ps15-worker
+spec:
+  replicas: 0
+  selector:
+    matchLabels: { app: ps15-worker }
+  template:
+    metadata: { labels: { app: ps15-worker } }
+    spec:
+      containers:
+        - name: worker
+          image: ps15-backend:latest
+          command: ["python", "-c", "from backend.kafka_worker import run_worker; from backend.main import engine; run_worker(engine)"]
+          envFrom: [{ configMapRef: { name: ps15-config } }, { secretRef: { name: ps15-secrets } }]

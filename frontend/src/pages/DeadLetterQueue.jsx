@@ -1,0 +1,1 @@
+export default function DeadLetterQueue() { return <section className="panel"><h3>Dead Letter Queue</h3><p>Invalid events are persisted by the backend.</p></section> }

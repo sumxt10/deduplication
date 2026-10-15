@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: sqlite:///./data/ps15.db
+      FRONTEND_ORIGIN: http://localhost:5173
+    volumes: ["ps15-data:/app/data"]
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports: ["5173:80"]
+    depends_on: [backend]
+volumes:
+  ps15-data:

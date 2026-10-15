@@ -1,0 +1,1 @@
+export default function Sidebar({ items = [], onSelect }) { return <nav>{items.map((item) => <button className="nav" key={item} onClick={() => onSelect(item)}>{item}</button>)}</nav> }
