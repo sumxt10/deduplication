@@ -231,15 +231,58 @@ export default function CloudArchitecture({ summary, onReset }) {
         </div>
       )}
 
-      {/* Tab 3: Safety Setup */}
+      {/* Tab 3: Safety Setup & AWS Account Status */}
       {activeTab === 'safety' && (
         <div className="panel">
           <div className="panel-header">
             <div>
-              <h2 className="panel-title">AWS Zero-Spend Safety Setup (Never Get Charged)</h2>
+              <h2 className="panel-title">AWS Zero-Spend Safety Setup &amp; Account Status</h2>
               <p className="panel-desc">
-                Follow these 4 safety guardrails immediately upon account creation to guarantee zero unexpected charges.
+                Enforcing strict ₹0 out-of-pocket usage charges, 100% local-first verification, and explicit authorization guardrails.
               </p>
+            </div>
+            <span className="badge badge-accepted" style={{ padding: '6px 12px' }}>
+              ₹0 Target Enforced
+            </span>
+          </div>
+
+          {/* Current Verified Account State */}
+          <div className="metrics-grid" style={{ marginBottom: '24px' }}>
+            <div className="metric-card">
+              <div className="metric-card-title">AWS Account Plan</div>
+              <div className="metric-card-value" style={{ color: '#38bdf8' }}>Free Tier</div>
+              <div className="metric-card-subtitle">Active Free account tier</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-card-title">Promotional Credits</div>
+              <div className="metric-card-value" style={{ color: '#10b981' }}>$120.00</div>
+              <div className="metric-card-subtitle">~183 days access remaining</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-card-title">Current Amount Due</div>
+              <div className="metric-card-value" style={{ color: '#34d399' }}>$0.00</div>
+              <div className="metric-card-subtitle">Strict ₹0 out-of-pocket target</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-card-title">Zero-Spend Alert Budget</div>
+              <div className="metric-card-value" style={{ color: '#f59e0b' }}>$1.00</div>
+              <div className="metric-card-subtitle">Email triggers at 50% ($0.50)</div>
+            </div>
+          </div>
+
+          {/* Strict Pre-Deployment Protocol */}
+          <div className="alert-box alert-info" style={{ marginBottom: '24px', borderColor: '#3b82f6' }}>
+            <div>
+              <strong style={{ color: '#93c5fd' }}>Mandatory Pre-Deployment Evaluation Protocol:</strong>
+              <p style={{ margin: '6px 0 0', fontSize: '13px', lineHeight: 1.6 }}>
+                To prevent accidental cloud charges, <strong>no cloud resources will ever be provisioned automatically</strong>. Before any AWS deployment is proposed:
+              </p>
+              <ol style={{ margin: '8px 0 0 20px', fontSize: '12px', lineHeight: 1.6 }}>
+                <li><strong>Local-First Validation:</strong> 100% of pipeline benchmarks, chaos testing, and duplicate evaluations are executed locally at ₹0 cost.</li>
+                <li><strong>Exact Service Itemization:</strong> Full breakdown of candidate services (compute, DB, broker) and exact Free-Tier credit limits.</li>
+                <li><strong>Credit Coverage &amp; Expiry Risk:</strong> Explicitly distinguish between services covered by promotional credits and those with fixed hourly costs.</li>
+                <li><strong>Zero-Charge Alternatives:</strong> Prioritize $0 services (EC2 t3/t4g micro, RDS db.t4g.micro, SQS FIFO, DynamoDB) over expensive managed offerings (MSK, NAT Gateways).</li>
+              </ol>
             </div>
           </div>
 

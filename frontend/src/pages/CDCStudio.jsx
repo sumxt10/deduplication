@@ -40,6 +40,16 @@ export default function CDCStudio({ onRefreshParent }) {
           </div>
         </div>
 
+        <div className="alert-box alert-info" style={{ marginBottom: '20px' }}>
+          <div>
+            <strong>Architecture Note (Simulated CDC vs. Enterprise Production CDC):</strong>
+            <ul style={{ margin: '6px 0 0 18px', fontSize: '12px', lineHeight: 1.6 }}>
+              <li><strong>Current Implementation (Simulated CDC):</strong> High-fidelity in-memory Debezium-compatible envelope generator simulating sequential LSNs, database txIDs, and at-least-once network retry bursts. Operates locally with ₹0 cloud overhead and zero external infrastructure dependencies.</li>
+              <li><strong>Enterprise Production CDC:</strong> In a production AWS environment, CDC is achieved by configuring PostgreSQL with <code>wal_level = logical</code>, running a Debezium connector on Kafka Connect, and reading physical WAL segment changes to publish into Apache Kafka topics.</li>
+            </ul>
+          </div>
+        </div>
+
         {errorMsg && (
           <div className="alert-box alert-info" style={{ borderColor: '#f43f5e', color: '#f87171' }}>
             <span>{errorMsg}</span>
