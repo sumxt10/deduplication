@@ -6,3 +6,7 @@ data:
   PROCESSING_MODE: direct
   FRONTEND_ORIGIN: http://ps15-frontend
   DATABASE_URL: sqlite:///./data/ps15.db
+  KAFKA_BOOTSTRAP_SERVERS: ps15-kafka:9092
+  KAFKA_TOPIC: financial-events
+  KAFKA_GROUP_ID: ps15-workers
+  LOG_LEVEL: INFO

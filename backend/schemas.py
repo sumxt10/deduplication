@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TransactionEvent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
     event_id: str = Field(min_length=1, max_length=128)
     transaction_id: str = Field(min_length=1, max_length=128)
     timestamp: datetime
@@ -60,7 +60,8 @@ class JobCreate(BaseModel):
     invalid_rate: float = Field(default=0.01, ge=0, lt=1)
     seed: int = 42
     batch_size: int = Field(default=500, ge=1, le=5000)
-    mode: Literal["direct"] = "direct"
+    mode: Literal["direct", "kafka"] = "direct"
+    dataset: Literal["synthetic", "paysim"] = "synthetic"
 
     @field_validator("invalid_rate")
     @classmethod
@@ -68,3 +69,10 @@ class JobCreate(BaseModel):
         if info.data.get("duplicate_rate", 0) + value >= 1:
             raise ValueError("duplicate_rate + invalid_rate must be less than 1")
         return value
+
+
+class CDCSimulationRequest(BaseModel):
+    total_events: int = Field(default=50, ge=1, le=5000)
+    duplicate_rate: float = Field(default=0.30, ge=0, lt=1)
+    network_retry_burst: bool = Field(default=True)
+    interval_ms: int = Field(default=10, ge=0, le=1000)

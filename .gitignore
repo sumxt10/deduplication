@@ -1,31 +1,129 @@
+# =========================================================================
+# Python & Virtual Environments
+# =========================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
 .venv/
 venv/
 env/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
+.coverage.*
 htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# =========================================================================
+# Node.js & Frontend Build Outputs
+# =========================================================================
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================================================================
+# Databases & Generated Runtime Data
+# =========================================================================
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/*.db*
+data/*.sqlite*
+data/*.csv
+data/*.json
+data/*.parquet
+data/*.log
+!data/.gitkeep
+
+# =========================================================================
+# Secrets, Environment & Cloud Credentials
+# =========================================================================
 .env
 .env.*
 !.env.example
-node_modules/
-frontend/dist/
-dist/
-build/
-data/*.csv
-data/*.db*
-data/*.sqlite*
-data/*.json
-data/*.log
+*.pem
+*.key
+*.crt
+k8s/secret.yaml
+k8s/secrets.yaml
+!k8s/secret.example.yaml
+
+# =========================================================================
+# Logs & Process Outputs
+# =========================================================================
 *.log
+logs/
+*.pid
+
+# =========================================================================
+# Operating System & IDE Artifacts
+# =========================================================================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Editors & IDEs
 .vscode/
+!.vscode/settings.json.example
 .idea/
 *.swp
 *.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# =========================================================================
+# Local Agent / AI Cache
+# =========================================================================
+.agents/
+.gemini/
+.system_generated/

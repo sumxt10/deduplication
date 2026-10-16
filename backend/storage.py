@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 import threading
@@ -43,6 +44,9 @@ class Storage:
                 status TEXT NOT NULL, reason TEXT, created_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ix_processed_event ON processed_events(event_id);
+            CREATE INDEX IF NOT EXISTS ix_processed_tx ON processed_events(transaction_id);
+            CREATE INDEX IF NOT EXISTS ix_processed_fp ON processed_events(fingerprint);
+
             CREATE TABLE IF NOT EXISTS transactions (
                 transaction_id TEXT PRIMARY KEY, event_id TEXT NOT NULL,
                 sender_account TEXT NOT NULL, receiver_account TEXT NOT NULL,
@@ -58,8 +62,10 @@ class Storage:
             );
             CREATE TABLE IF NOT EXISTS dead_letter_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, payload TEXT NOT NULL,
-                reason TEXT NOT NULL, created_at TEXT NOT NULL
+                reason TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'unresolved',
+                created_at TEXT NOT NULL, resolved_at TEXT
             );
+
             CREATE TABLE IF NOT EXISTS demo_jobs (
                 job_id TEXT PRIMARY KEY, status TEXT NOT NULL, config TEXT NOT NULL,
                 progress INTEGER NOT NULL DEFAULT 0, total INTEGER NOT NULL,
@@ -68,6 +74,19 @@ class Storage:
                 duration_ms REAL, result TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
             );
             """)
+            # Ensure columns exist in case table was created previously without them
+            try:
+                db.execute("ALTER TABLE dead_letter_events ADD COLUMN status TEXT NOT NULL DEFAULT 'unresolved'")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                db.execute("ALTER TABLE dead_letter_events ADD COLUMN resolved_at TEXT")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                db.execute("CREATE INDEX IF NOT EXISTS ix_dlq_status ON dead_letter_events(status)")
+            except sqlite3.OperationalError:
+                pass
 
     def reset(self):
         with self.transaction() as db:
@@ -81,10 +100,19 @@ class Storage:
             counts = {row["status"]: row["count"] for row in db.execute(
                 "SELECT status, COUNT(*) count FROM processed_events GROUP BY status")}
             invalid = db.execute("SELECT COUNT(*) FROM dead_letter_events").fetchone()[0]
-            return {"total_deliveries": sum(counts.values()) + invalid, "accepted": counts.get("accepted", 0),
-                    "duplicates": counts.get("duplicate", 0), "conflicts": counts.get("conflict", 0),
-                    "invalid": invalid,
-                    "transactions": db.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]}
+            unresolved_dlq = db.execute(
+                "SELECT COUNT(*) FROM dead_letter_events WHERE status = 'unresolved'"
+            ).fetchone()[0]
+            return {
+                "total_deliveries": sum(counts.values()) + invalid,
+                "accepted": counts.get("accepted", 0),
+                "duplicates": counts.get("duplicate", 0),
+                "conflicts": counts.get("conflict", 0),
+                "invalid": invalid,
+                "unresolved_dlq": unresolved_dlq,
+                "transactions": db.execute("SELECT COUNT(*) FROM transactions").fetchone()[0],
+                "accounts": db.execute("SELECT COUNT(*) FROM accounts").fetchone()[0],
+            }
         finally:
             db.close()
 
@@ -93,10 +121,47 @@ class Storage:
         try:
             where, values = (" WHERE status = ?", [status]) if status else ("", [])
             total = db.execute("SELECT COUNT(*) FROM processed_events" + where, values).fetchone()[0]
-            rows = db.execute("SELECT * FROM processed_events" + where +
-                              " ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                              values + [page_size, (page - 1) * page_size]).fetchall()
+            rows = db.execute(
+                "SELECT * FROM processed_events" + where +
+                " ORDER BY id DESC LIMIT ? OFFSET ?",
+                values + [page_size, (page - 1) * page_size],
+            ).fetchall()
             return {"items": [dict(row) for row in rows], "total": total,
                     "page": page, "page_size": page_size}
         finally:
             db.close()
+
+    def dlq_events(self, page=1, page_size=50, status=None):
+        db = self.connection()
+        try:
+            where, values = (" WHERE status = ?", [status]) if status else ("", [])
+            total = db.execute("SELECT COUNT(*) FROM dead_letter_events" + where, values).fetchone()[0]
+            rows = db.execute(
+                "SELECT * FROM dead_letter_events" + where +
+                " ORDER BY id DESC LIMIT ? OFFSET ?",
+                values + [page_size, (page - 1) * page_size],
+            ).fetchall()
+            return {"items": [dict(row) for row in rows], "total": total,
+                    "page": page, "page_size": page_size}
+        finally:
+            db.close()
+
+    def get_dlq_event(self, dlq_id: int):
+        db = self.connection()
+        try:
+            row = db.execute("SELECT * FROM dead_letter_events WHERE id = ?", (dlq_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            db.close()
+
+    def resolve_dlq(self, dlq_id: int, status: str = "resolved"):
+        now = datetime.now(timezone.utc).isoformat()
+        with self.transaction() as db:
+            db.execute(
+                "UPDATE dead_letter_events SET status = ?, resolved_at = ? WHERE id = ?",
+                (status, now, dlq_id),
+            )
+
+    def delete_dlq(self, dlq_id: int):
+        with self.transaction() as db:
+            db.execute("DELETE FROM dead_letter_events WHERE id = ?", (dlq_id,))

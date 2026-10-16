@@ -1,18 +1,124 @@
 services:
+  # =========================================================================
+  # Profile: minimal (Default lightweight mode for rapid local testing)
+  # Runs backend + frontend with local SQLite storage and in-memory Bloom filter
+  # =========================================================================
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    ports: ["8000:8000"]
+    ports:
+      - "8000:8000"
     environment:
-      DATABASE_URL: sqlite:///./data/ps15.db
-      FRONTEND_ORIGIN: http://localhost:5173
-    volumes: ["ps15-data:/app/data"]
+      - DATABASE_URL=sqlite:///./data/ps15.db
+      - FRONTEND_ORIGIN=http://localhost:5173
+      - PROCESSING_MODE=direct
+      - LOG_LEVEL=INFO
+    volumes:
+      - ps15-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    profiles: ["", "minimal", "distributed"]
+
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    ports: ["5173:80"]
-    depends_on: [backend]
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    profiles: ["", "minimal", "distributed"]
+
+  # =========================================================================
+  # Profile: distributed (Production-grade distributed mode)
+  # Runs PostgreSQL, Apache Kafka (KRaft mode), Deduplication Worker replicas,
+  # and Prometheus metrics exporter
+  # Usage: docker compose --profile distributed up
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ps15-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ps15
+      POSTGRES_USER: ps15_admin
+      POSTGRES_PASSWORD: ps15_secure_password
+    volumes:
+      - ps15-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ps15_admin -d ps15"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    profiles: ["distributed"]
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: ps15-kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: "4L622nShTUiTvyloGQ3B5w"
+    volumes:
+      - ps15-kafkadata:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-cluster.sh", "cluster-id", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["distributed"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-c", "from backend.kafka_worker import run_worker; from backend.main import engine; run_worker(engine)"]
+    environment:
+      - DATABASE_URL=sqlite:///./data/ps15.db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=financial-events
+      - KAFKA_GROUP_ID=ps15-workers
+    volumes:
+      - ps15-data:/app/data
+    depends_on:
+      kafka:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+    profiles: ["distributed"]
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: ps15-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - backend
+    profiles: ["distributed"]
+
 volumes:
   ps15-data:
+  ps15-pgdata:
+  ps15-kafkadata:
